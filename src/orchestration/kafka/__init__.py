@@ -1,0 +1,2 @@
+"""Utilitaires Kafka réutilisables."""
+

@@ -1,0 +1,131 @@
+##############################
+# Dockerfile STAGING - Clone depuis Git
+##############################
+#
+# BUILD:
+#   docker build \
+#     --build-arg GIT_REPO=https://github.com/org/repo.git \
+#     --build-arg GIT_BRANCH=staging \
+#     --build-arg APP_SOURCE_DIR=app \
+#     --build-arg REQUIREMENTS_PATH=requirements.txt \
+#     --build-arg APP_ENTRYPOINT=app.main:app \
+#     --secret id=github_token,src=$HOME/.github_token \
+#     -f deployment/docker/Dockerfile.staging.git \
+#     -t project-name:staging .
+#
+##############################
+
+##############################
+# 1. Phase « git-cloner »
+##############################
+
+FROM python:3.11-slim AS git-cloner
+
+ARG GIT_BRANCH=staging
+ARG GIT_REPO
+
+RUN apt-get update && apt-get install -y git \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /tmp
+
+RUN --mount=type=secret,id=github_token \
+    --mount=type=secret,id=git_username \
+    if [ -f /run/secrets/github_token ]; then \
+        GIT_TOKEN=$(cat /run/secrets/github_token | tr -d '\n\r\t ') && \
+        if echo "${GIT_REPO}" | grep -q "^git@"; then \
+            REPO_PATH=$(echo "${GIT_REPO}" | sed -E 's|^git@([^:]+):|\1/|'); \
+        else \
+            REPO_PATH=$(echo "${GIT_REPO}" | sed -E 's|^https?://||'); \
+        fi && \
+        if echo "${GIT_REPO}" | grep -q "gitlab.com"; then \
+            if [ -f /run/secrets/git_username ]; then \
+                GIT_USER=$(cat /run/secrets/git_username | tr -d '\n\r\t '); \
+                REPO_URL="https://${GIT_USER}:${GIT_TOKEN}@${REPO_PATH}"; \
+            else \
+                REPO_URL="https://oauth2:${GIT_TOKEN}@${REPO_PATH}"; \
+            fi; \
+        else \
+            REPO_URL="https://oauth2:${GIT_TOKEN}@${REPO_PATH}"; \
+        fi && \
+        git clone --branch ${GIT_BRANCH} --depth 1 "${REPO_URL}" app && \
+        unset GIT_TOKEN GIT_USER REPO_URL REPO_PATH; \
+    else \
+        git clone --branch ${GIT_BRANCH} --depth 1 ${GIT_REPO} app; \
+    fi
+
+RUN cd app && \
+    echo "=== Git Info ===" && \
+    git log -1 --pretty=format:"Commit: %H%nBranch: ${GIT_BRANCH}%n"
+
+##############################
+# 2. Phase « builder »
+##############################
+
+FROM python:3.11-slim AS builder
+
+ARG REQUIREMENTS_PATH=requirements.txt
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libpq-dev \
+    libc-dev \
+    libssl-dev \
+    make \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+
+COPY --from=git-cloner /tmp/app/${REQUIREMENTS_PATH} ./requirements.txt
+RUN pip install --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
+
+##############################
+# 3. Phase « runtime »
+##############################
+
+FROM python:3.11-slim
+
+ARG GIT_BRANCH=staging
+ARG APP_SOURCE_DIR=app
+ARG APP_DEST_DIR=app
+ARG APP_ENTRYPOINT=app.main:app
+ARG WORKDIR=/app
+ARG APP_PYTHON_PATH=
+
+ENV APP_ENV=staging \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    GIT_BRANCH=${GIT_BRANCH} \
+    APP_ENTRYPOINT=${APP_ENTRYPOINT} \
+    PYTHONPATH=${APP_PYTHON_PATH}
+
+WORKDIR ${WORKDIR}
+
+RUN apt-get update && apt-get install -y curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Copier le code source: source (repo) -> destination (conteneur)
+COPY --from=git-cloner /tmp/app/${APP_SOURCE_DIR} ${WORKDIR}/${APP_DEST_DIR}
+
+# Utilisateur non-root pour la sécurité
+RUN useradd -m -u 1000 appuser && \
+    chown -R appuser:appuser ${WORKDIR}
+USER appuser
+
+EXPOSE 80
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s \
+    CMD curl -f http://localhost:80/health || exit 1
+
+# Staging : 2 workers (forme JSON pour une meilleure gestion des signaux)
+CMD ["sh", "-c", "exec uvicorn ${APP_ENTRYPOINT} --host 0.0.0.0 --port 80 --workers 2"]

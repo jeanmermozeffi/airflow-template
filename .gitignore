@@ -205,3 +205,40 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Dossiers Airflow non versionnés
+logs/
+tmp/
+airflow_home/
+__pycache__/
+*.db
+.env.local
+/git_deploy.sh
+
+# Infrastructure Docker - fichiers sensibles
+infra/.env.dev
+infra/.env.staging
+infra/.env.prod
+# Garder le template
+!infra/.env.example
+
+# DevOps configuration (peut contenir des tokens)
+.devops.yml
+
+# Donnees runtime locales (ne pas versionner)
+/postgres-data/
+/postgres-data-*/
+/airflow-logs/
+/airflow-logs-*/
+
+# Runtime local Docker wrapper dir
+/.docker/
+deployment/postgres-data-dev/
+deployment/airflow-logs-dev
+/.devops.monitoring-servers.yml
+
+# Ignorer tous les fichiers d’environnement
+.env.*
+.en.prod
+.DS_Store
+.idea/

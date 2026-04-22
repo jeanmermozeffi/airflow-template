@@ -1,0 +1,26 @@
+services:
+  airflow-project-api-dev:
+    ports:
+    - ${DEV_PORT:-8001}:80
+    environment:
+    - ENVIRONMENT=dev
+    - LOG_LEVEL=DEBUG
+    - RELOAD=true
+    labels:
+    - project=${PROJECT_NAME}
+    - environment=dev
+    - service=api
+    - cic.project=airflow-project
+    - cic.env=dev
+    - cic.service=api
+    - traefik.enable=false
+  airflow-project-redis-dev:
+    ports:
+    - ${REDIS_DEV_PORT:-6379}:6379
+    labels:
+    - project=${PROJECT_NAME}
+    - environment=dev
+    - service=redis
+    - cic.project=airflow-project
+    - cic.env=dev
+    - cic.service=redis

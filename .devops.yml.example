@@ -1,0 +1,32 @@
+# Configuration DevOps pour airflow-project
+# Copiez ce fichier vers .devops.yml et configurez-le
+
+project_name: airflow-project
+stack_type: fastapi-redis
+compose_project_name: airflow-project
+label_namespace: cic
+
+# Orchestrator / Airflow (optionnel)
+airflow_version: 3.0.4
+airflow_base_image: apache/airflow:3.0.4-python3.11
+airflow_dags_folder_default: /opt/airflow/src/airflow_src/dags
+airflow_plugins_folder_default: /opt/airflow/src/airflow_src/plugins
+
+registry_username: your-dockerhub-username
+registry_url: docker.io
+image_name: airflow-project
+
+git_repo: https://github.com/votre-org/airflow-project.git
+github_token: # Optionnel
+
+dev_branch: dev
+staging_branch: staging
+prod_branch: main
+
+# Ports (optionnel)
+dev_port: 8001
+staging_port: 8002
+prod_port: 8000
+redis_dev_port: 6379
+redis_staging_port: 6381
+redis_prod_port: 6380

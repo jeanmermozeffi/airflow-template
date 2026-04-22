@@ -1,0 +1,28 @@
+# VCS / IDE
+.git
+.git/*
+.idea
+.vscode
+
+# Python
+.venv
+venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+
+# Secrets / environnements locaux
+.env
+.env.*
+!.env.example
+
+# Donnees runtime locales (souvent volumineuses)
+airflow-logs-*
+postgres-data-*
+.docker
+logs
+
+# Divers
+.DS_Store
+packages

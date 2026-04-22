@@ -1,0 +1,15 @@
+sla:
+  default:
+    max_duration_minutes: 60
+    warning_threshold_minutes: 45
+    on_warning: ["email:data-team@example.com"]
+    on_breach: ["email:data-team@example.com", "slack:#data-alerts"]
+
+  dags:
+    ingestion_dag:
+      max_duration_minutes: 90
+    transformation_dag:
+      max_duration_minutes: 120
+    validation_dag:
+      max_duration_minutes: 45
+

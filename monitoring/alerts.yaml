@@ -1,0 +1,22 @@
+alerts:
+  channels:
+    email:
+      enabled: true
+      recipients:
+        - data-team@example.com
+    slack:
+      enabled: true
+      webhook_env_var: SLACK_WEBHOOK_URL
+      default_channel: "#data-alerts"
+
+  rules:
+    - name: dag_failed
+      event: dag_failure
+      severity: critical
+      channels: ["email", "slack"]
+
+    - name: task_retried_many_times
+      event: task_retry_exceeded
+      severity: warning
+      channels: ["slack"]
+

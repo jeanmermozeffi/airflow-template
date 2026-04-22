@@ -1,0 +1,37 @@
+connections:
+  - conn_id: dwh_postgres
+    conn_type: postgres
+    host: ${ORCH_DB__DWH__HOST:-postgres}
+    port: ${ORCH_DB__DWH__PORT:-5432}
+    schema: ${ORCH_DB__DWH__DB:-analytics}
+    login: ${ORCH_DB__DWH__USER:-analytics_user}
+    password: ${ORCH_DB__DWH__PASSWORD:-analytics_password}
+    description: "Connexion PostgreSQL DWH"
+
+  - conn_id: raw_postgres
+    conn_type: postgres
+    host: ${ORCH_DB__RAW__HOST:-postgres}
+    port: ${ORCH_DB__RAW__PORT:-5432}
+    schema: ${ORCH_DB__RAW__DB:-raw_landing}
+    login: ${ORCH_DB__RAW__USER:-raw_user}
+    password: ${ORCH_DB__RAW__PASSWORD:-raw_password}
+    description: "Deuxième source PostgreSQL (même type de connecteur)"
+
+  - conn_id: crm_mysql
+    conn_type: mysql
+    host: ${ORCH_DB__CRM__HOST:-mysql}
+    port: ${ORCH_DB__CRM__PORT:-3306}
+    schema: ${ORCH_DB__CRM__DB:-crm}
+    login: ${ORCH_DB__CRM__USER:-crm_user}
+    password: ${ORCH_DB__CRM__PASSWORD:-crm_password}
+    description: "Source MySQL CRM"
+
+  - conn_id: smtp_default
+    conn_type: smtp
+    host: ${SMTP_HOST:-smtp.gmail.com}
+    port: ${SMTP_PORT:-587}
+    login: ${SMTP_LOGIN:-}
+    password: ${SMTP_PASSWORD:-}
+    extra:
+      from_email: ${SMTP_FROM:-}
+      disable_tls: false

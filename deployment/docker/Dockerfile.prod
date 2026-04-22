@@ -1,0 +1,82 @@
+##############################
+# Dockerfile PROD - Build Local
+##############################
+#
+# BUILD:
+#   docker build \
+#     --build-arg APP_SOURCE_DIR=app \
+#     --build-arg REQUIREMENTS_PATH=requirements.txt \
+#     --build-arg APP_ENTRYPOINT=app.main:app \
+#     -f deployment/docker/Dockerfile.prod \
+#     -t project-name:prod .
+#
+##############################
+
+##############################
+# 1. Phase « builder »
+##############################
+
+FROM python:3.11-slim AS builder
+
+ARG REQUIREMENTS_PATH=requirements.txt
+
+ENV PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1
+
+RUN apt-get update && apt-get install -y \
+    gcc \
+    libpq-dev \
+    libc-dev \
+    libssl-dev \
+    make \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /build
+
+COPY ${REQUIREMENTS_PATH} ./requirements.txt
+RUN pip install --upgrade pip \
+    && pip install --no-cache-dir -r requirements.txt
+
+##############################
+# 2. Phase « runtime »
+##############################
+
+FROM python:3.11-slim
+
+ARG APP_SOURCE_DIR=app
+ARG APP_DEST_DIR=app
+ARG APP_ENTRYPOINT=app.main:app
+ARG WORKDIR=/app
+ARG APP_PYTHON_PATH=
+
+ENV APP_ENV=prod \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONUNBUFFERED=1 \
+    APP_ENTRYPOINT=${APP_ENTRYPOINT} \
+    PYTHONPATH=${APP_PYTHON_PATH}
+
+WORKDIR ${WORKDIR}
+
+RUN apt-get update && apt-get install -y curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY --from=builder /usr/local/lib/python3.11/site-packages /usr/local/lib/python3.11/site-packages
+COPY --from=builder /usr/local/bin /usr/local/bin
+
+# Copier le code source: source (local) -> destination (conteneur)
+COPY ${APP_SOURCE_DIR} ${WORKDIR}/${APP_DEST_DIR}
+
+# Utilisateur non-root pour la sécurité
+RUN useradd -m -u 1000 appuser && \
+    chown -R appuser:appuser ${WORKDIR}
+USER appuser
+
+EXPOSE 80
+
+HEALTHCHECK --interval=30s --timeout=3s --start-period=40s \
+    CMD curl -f http://localhost:80/health || exit 1
+
+# Production : 4 workers (forme JSON pour une meilleure gestion des signaux)
+CMD ["sh", "-c", "exec uvicorn ${APP_ENTRYPOINT} --host 0.0.0.0 --port 80 --workers 4"]

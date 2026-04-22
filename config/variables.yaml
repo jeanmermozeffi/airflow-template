@@ -1,0 +1,13 @@
+variables:
+  - key: project_name
+    value: airflow-orchestration-template
+    description: "Nom logique du projet Airflow"
+
+  - key: default_timezone
+    value: UTC
+    description: "Timezone fonctionnelle des DAGs"
+
+  - key: data_quality_min_rows
+    value: "1"
+    description: "Seuil minimal de lignes attendues pour les contrôles SQL"
+

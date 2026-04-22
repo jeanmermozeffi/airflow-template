@@ -1,0 +1,2 @@
+"""Sensors personnalisés réutilisables."""
+

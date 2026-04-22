@@ -1,0 +1,41 @@
+services:
+  airflow-project-api-staging:
+    ports:
+    - ${STAGING_PORT:-8002}:80
+    environment:
+    - ENVIRONMENT=staging
+    - LOG_LEVEL=INFO
+    - WORKERS=2
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    labels:
+    - project=${PROJECT_NAME}
+    - environment=staging
+    - service=api
+    - cic.project=airflow-project
+    - cic.env=staging
+    - cic.service=api
+    - traefik.enable=true
+    - traefik.http.routers.${PROJECT_NAME}-api-staging.rule=Host(`${STAGING_DOMAIN:-api.staging.localhost}`)
+    - traefik.http.services.${PROJECT_NAME}-api-staging.loadbalancer.server.port=80
+  airflow-project-redis-staging:
+    ports:
+    - ${REDIS_STAGING_PORT:-6381}:6379
+    labels:
+    - project=${PROJECT_NAME}
+    - environment=staging
+    - service=redis
+    - cic.project=airflow-project
+    - cic.env=staging
+    - cic.service=redis
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
