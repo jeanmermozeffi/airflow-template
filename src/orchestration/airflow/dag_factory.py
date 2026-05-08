@@ -2,8 +2,8 @@ from datetime import datetime
 from typing import Callable
 
 from airflow import DAG
-from airflow.operators.empty import EmptyOperator
-from airflow.operators.python import PythonOperator
+from airflow.providers.standard.operators.empty import EmptyOperator
+from airflow.providers.standard.operators.python import PythonOperator
 
 from orchestration.airflow.config_loader import load_pipeline_config
 from orchestration.db.postgres_utils import validate_required_connections

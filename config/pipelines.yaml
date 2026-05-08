@@ -1,27 +1,133 @@
 pipelines:
-  ingestion:
-    dag_id: ingestion_dag
-    schedule: "0 2 * * *"
-    owner: data-platform
-    retries: 2
-    retry_delay_minutes: 5
-    tags: ["template", "ingestion"]
-    required_connections: ["dwh_postgres"]
+    # ── Initialisation DDL ────────────────────────────────────────────────────
+    #
+    # Setup one-shot : création des schémas et tables.
+    # schedule: null = déclenchement manuel uniquement.
 
-  transformation:
-    dag_id: transformation_dag
-    schedule: "0 3 * * *"
-    owner: data-platform
-    retries: 2
-    retry_delay_minutes: 10
-    tags: ["template", "transformation"]
-    required_connections: ["dwh_postgres", "raw_postgres"]
+    ddl_init:
+        dag_id: ddl_init
+        description: "Initialisation des schémas et tables DDL du DWH"
+        schedule: null
+        owner: data-platform
+        retries: 0
+        retry_delay_minutes: 0
+        tags: ["template", "setup", "ddl"]
+        required_connections: ["dwh_postgres"]
+        depends_on_asset: null
+        produces_asset: null
+        sql_root: null
 
-  validation:
-    dag_id: validation_dag
-    schedule: "30 3 * * *"
-    owner: data-platform
-    retries: 1
-    retry_delay_minutes: 5
-    tags: ["template", "validation", "quality"]
-    required_connections: ["dwh_postgres", "crm_mysql"]
+    # ── Pipeline ELT (chaîne asset-driven) ───────────────────────────────────
+    #
+    # Graphe de dépendances recommandé :
+    #
+    #   ingestion  ──[RAW_READY]──►
+    #     data_cleaning ──[CLEAN_READY]──►
+    #       transformation ──[DWH_READY]──►
+    #         data_quality  (terminal)
+    #
+    # Chaque pipeline déclare :
+    #   depends_on_asset : asset Airflow qui déclenche ce DAG (null = cron)
+    #   produces_asset   : asset Airflow publié en sortie (null = terminal)
+    #   sql_root         : répertoire SQL relatif à include/sql/
+    #   description      : affiché dans l'UI Airflow (DAG description)
+
+    ingestion:
+        dag_id: ingestion_dag
+        description: "Extraction source → raw staging PostgreSQL"
+        schedule: "0 2 * * *"
+        owner: data-platform
+        retries: 2
+        retry_delay_minutes: 5
+        tags: ["template", "elt", "ingestion"]
+        required_connections: ["source_db", "dwh_postgres"]
+        depends_on_asset: null
+        produces_asset: raw_ready
+        sql_root: staging
+
+    data_cleaning:
+        dag_id: data_cleaning_dag
+        description: "Nettoyage staging → publie clean_ready pour la transformation"
+        schedule: null
+        owner: data-platform
+        retries: 1
+        retry_delay_minutes: 5
+        tags: ["template", "elt", "cleaning"]
+        required_connections: ["dwh_postgres"]
+        depends_on_asset: raw_ready
+        produces_asset: clean_ready
+        sql_root: data_cleaning
+
+    transformation:
+        dag_id: transformation_dag
+        description: "Transformation dimensions / faits / marts après nettoyage staging"
+        schedule: null
+        owner: data-platform
+        retries: 2
+        retry_delay_minutes: 5
+        tags: ["template", "elt", "transformation"]
+        required_connections: ["dwh_postgres"]
+        depends_on_asset: clean_ready
+        produces_asset: dwh_ready
+        sql_root: null
+
+    # ── Data Quality ──────────────────────────────────────────────────────────
+
+    data_quality:
+        dag_id: data_quality_dag
+        description: "Contrôles qualité DWH — alerte si checks critiques échouent"
+        schedule: null
+        owner: data-platform
+        retries: 1
+        retry_delay_minutes: 5
+        tags: ["template", "quality", "validation"]
+        required_connections: ["dwh_postgres"]
+        depends_on_asset: dwh_ready
+        produces_asset: null
+        sql_root: data_quality
+
+    # ── Notifications ─────────────────────────────────────────────────────────
+    #
+    # Les pipelines de notification lisent le DWH mais n'exécutent pas l'ETL.
+    # Ils tournent sur cron indépendamment de la chaîne asset-driven.
+
+    notif_eod:
+        dag_id: notif_eod_dag
+        description: "Rappels quotidiens fin de journée"
+        schedule: "0 17 * * 1-5"
+        owner: data-platform
+        retries: 1
+        retry_delay_minutes: 3
+        tags: ["template", "notifications", "reminder"]
+        required_connections: ["dwh_postgres", "smtp_default"]
+        depends_on_asset: null
+        produces_asset: null
+        sql_root: null
+
+    notif_weekly:
+        dag_id: notif_weekly_dag
+        description: "Récapitulatif hebdomadaire"
+        schedule: "0 8 * * 1"
+        owner: data-platform
+        retries: 1
+        retry_delay_minutes: 3
+        tags: ["template", "notifications", "weekly"]
+        required_connections: ["dwh_postgres", "smtp_default"]
+        depends_on_asset: null
+        produces_asset: null
+        sql_root: null
+
+    # ── Monitoring ────────────────────────────────────────────────────────────
+
+    dag_health_check:
+        dag_id: dag_health_check_dag
+        description: "Health Check des DAGs — query Airflow DB, notification si erreurs"
+        schedule: "0 7 * * *"
+        owner: data-platform
+        retries: 1
+        retry_delay_minutes: 3
+        tags: ["template", "monitoring", "health-check"]
+        required_connections: ["smtp_default"]
+        depends_on_asset: null
+        produces_asset: null
+        sql_root: null

@@ -1,0 +1,89 @@
+# ═════════════════════════════════════════════════════════════════════════════
+# Data Cleaning Operations — Template
+# ═════════════════════════════════════════════════════════════════════════════
+#
+# Format lu par data_cleaning_dag.py :
+#   operation_name:
+#     table: schema.table  (ex: raw.stg_customers)
+#     description: "..."
+#     enabled: true|false
+#     phase: 1|2   (documentation uniquement, ordre d'exécution = ordre YAML)
+#
+# Règles d'exécution :
+#   • Opérations sur la MÊME table     → SÉQUENTIELLES (ordre YAML préservé)
+#   • Opérations sur DIFFÉRENTES tables → PARALLÈLES
+#   • enabled: false                   → opération ignorée par le DAG
+#   • Le SQL correspondant doit exister dans operations.sql (-- @operation_name)
+#
+# Deux phases métier recommandées :
+#   Phase 1 — Nettoyage technique (trim, NULL → défaut, casse)
+#   Phase 2 — Nettoyage métier (déduplication, consolidation, règles projet)
+#
+# Pour ajouter une opération :
+#   1. Ajouter le bloc SQL dans operations.sql  →  -- @nom_operation
+#   2. Ajouter l'entrée ci-dessous
+#   3. Relancer le scheduler Airflow
+
+operations:
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # SETUP — Extensions PostgreSQL (toujours en premier)
+    # ─────────────────────────────────────────────────────────────────────────
+
+    setup_extensions:
+        table: "._setup"
+        description: "Créer les extensions PostgreSQL requises (unaccent)"
+        enabled: true
+        phase: 1
+
+    # ═════════════════════════════════════════════════════════════════════════
+    # PHASE 1 — Nettoyage technique
+    # ═════════════════════════════════════════════════════════════════════════
+
+    # ── raw.stg_records (Phase 1) ────────────────────────────────────────────
+
+    stg_records_trim_text_fields:
+        table: raw.stg_records
+        description: "Supprimer les espaces avant/après dans tous les champs texte"
+        enabled: true
+        phase: 1
+
+    stg_records_fill_null_integers:
+        table: raw.stg_records
+        description: "Remplacer les entiers NULL par 0"
+        enabled: true
+        phase: 1
+
+    stg_records_normalize_status:
+        table: raw.stg_records
+        description: "Normaliser status NULL → 'unknown'"
+        enabled: true
+        phase: 1
+
+    # ═════════════════════════════════════════════════════════════════════════
+    # PHASE 2 — Nettoyage métier
+    # ═════════════════════════════════════════════════════════════════════════
+
+    # ── raw.stg_records (Phase 2) ────────────────────────────────────────────
+
+    stg_records_dedupe:
+        table: raw.stg_records
+        description: "Supprimer les doublons exacts (garder ID minimum)"
+        enabled: true
+        phase: 2
+
+    stg_records_fix_case:
+        table: raw.stg_records
+        description: "Appliquer Title Case sur le champ label"
+        enabled: true
+        phase: 2
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Pour ajouter une nouvelle table, copier ce bloc :
+    #
+    # new_table_operation_name:
+    #     table: raw.stg_new_table
+    #     description: "Description de l'opération"
+    #     enabled: true
+    #     phase: 1
+    # ─────────────────────────────────────────────────────────────────────────

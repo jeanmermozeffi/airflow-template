@@ -1,9 +1,23 @@
-apache-airflow==2.10.3
-apache-airflow-providers-postgres==5.13.1
-apache-airflow-providers-smtp==1.8.0
-PyYAML==6.0.2
-python-dotenv==1.1.1
-SQLAlchemy==1.4.54
-psycopg2-binary==2.9.10
-PyMySQL==1.1.1
-pytest==8.4.1
+# =============================================================================
+# requirements.txt — Environnement de développement local (IDE, tests)
+#
+# Pour Docker : l'image apache/airflow:<version> embarque déjà apache-airflow.
+# =============================================================================
+
+# ── Apache Airflow + providers ────────────────────────────────────────────────
+apache-airflow==3.2.1
+apache-airflow-providers-postgres>=6.2.0
+apache-airflow-providers-mysql>=6.3.0
+apache-airflow-providers-smtp>=2.2.0
+apache-airflow-providers-fab>=2.4.0
+
+# ── Dépendances applicatives ──────────────────────────────────────────────────
+PyYAML>=6.0.2
+python-dotenv>=1.1.1
+psycopg2-binary>=2.9.10
+PyMySQL>=1.1.1
+# Jinja2 géré par apache-airflow-core (>=3.1.5 requis par airflow 3.2.1)
+# Ne pas pinner séparément pour éviter les conflits.
+
+# ── Dev / tests ───────────────────────────────────────────────────────────────
+pytest>=8.4.1

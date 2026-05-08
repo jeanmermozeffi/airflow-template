@@ -1,0 +1,99 @@
+# ═════════════════════════════════════════════════════════════════════════════
+# Data Quality Checks — Template
+# ═════════════════════════════════════════════════════════════════════════════
+#
+# Chaque check correspond à un bloc SQL dans checks.sql (marqueur -- @nom).
+# Le SQL doit retourner un seul entier.
+#
+# type:
+#   min_count  → résultat doit être >= threshold  (ex: table non vide)
+#   max_count  → résultat doit être <= threshold  (ex: violations = 0)
+#
+# severity:
+#   critical → bloque la chaîne, déclenche une alerte email
+#   warning  → inclus dans le rapport, non bloquant
+#
+# layer: dimensions | facts | marts
+#   → détermine le groupe d'exécution Airflow (séquence inter-couches, parallèle intra-couche)
+
+checks:
+
+    # ── Couche DIMENSIONS ──────────────────────────────────────────────────────
+
+    dim_record_count:
+        description: "dwh.dim_record doit contenir au moins 1 entrée"
+        layer: dimensions
+        severity: critical
+        type: min_count
+        threshold: 1
+
+    dim_record_no_null_key:
+        description: "Aucune dimension sans clé naturelle (external_id NULL)"
+        layer: dimensions
+        severity: warning
+        type: max_count
+        threshold: 0
+
+    dim_date_coverage:
+        description: "dwh.dim_date doit couvrir l'année en cours"
+        layer: dimensions
+        severity: critical
+        type: min_count
+        threshold: 1
+
+    # ── Couche FAITS ───────────────────────────────────────────────────────────
+
+    fact_events_count:
+        description: "dwh.fact_events doit contenir au moins 1 ligne"
+        layer: facts
+        severity: critical
+        type: min_count
+        threshold: 1
+
+    fact_events_orphan_records:
+        description: "Aucun événement avec record_id absent de dim_record"
+        layer: facts
+        severity: warning
+        type: max_count
+        threshold: 0
+
+    fact_events_freshness:
+        description: "fact_events rechargé dans les dernières 48h"
+        layer: facts
+        severity: critical
+        type: min_count
+        threshold: 1
+
+    fact_events_negative_amounts:
+        description: "Aucun montant négatif dans fact_events"
+        layer: facts
+        severity: critical
+        type: max_count
+        threshold: 0
+
+    fact_events_future_dates:
+        description: "Aucun événement avec une date future"
+        layer: facts
+        severity: warning
+        type: max_count
+        threshold: 0
+
+    # ── Couche MARTS ───────────────────────────────────────────────────────────
+
+    mart_summary_count:
+        description: "mart.mart_summary doit contenir au moins 1 ligne"
+        layer: marts
+        severity: warning
+        type: min_count
+        threshold: 1
+
+    # ─────────────────────────────────────────────────────────────────────────
+    # Pour ajouter un nouveau check, copier ce bloc :
+    #
+    # new_check_name:
+    #     description: "Description lisible du contrôle"
+    #     layer: dimensions  # ou facts, ou marts
+    #     severity: critical  # ou warning
+    #     type: min_count     # ou max_count
+    #     threshold: 1
+    # ─────────────────────────────────────────────────────────────────────────

@@ -1,13 +1,28 @@
 from __future__ import annotations
 
-from typing import Optional
+from typing import Any, Optional
 
-from airflow.hooks.base import BaseHook
 from airflow.models.connection import Connection
+from airflow.sdk.bases.hook import BaseHook
 from sqlalchemy import create_engine
 from sqlalchemy.engine import Engine
 
 from orchestration.common.config import ConnectorType, IntegrationConfig, RelationalSourceConfig
+
+# Paramètres de pool partagés pour toutes les connexions relationnelles (hors SQLite).
+# pool_pre_ping=True : teste la connexion avant chaque emprunt → élimine les connexions mortes.
+# pool_recycle=3600  : force la recréation après 1h → évite les déconnexions silencieuses (MySQL).
+_POOL_DEFAULTS: dict[str, Any] = {
+    "pool_size":      5,
+    "max_overflow":   10,
+    "pool_pre_ping":  True,
+    "pool_recycle":   3600,
+}
+
+
+def _pool_kwargs(uri: str) -> dict[str, Any]:
+    """Retourne les kwargs de pool, vides pour SQLite (NullPool/StaticPool incompatibles)."""
+    return {} if uri.startswith("sqlite") else _POOL_DEFAULTS
 
 
 def get_engine(
@@ -32,14 +47,15 @@ def get_engine_from_source_name(
     """Construit un moteur depuis une source déclarée en variables d'environnement."""
     config = integration_config or IntegrationConfig.from_environment()
     source = config.require_database(source_name=source_name)
-    return create_engine(source.sqlalchemy_uri())
+    uri = source.sqlalchemy_uri()
+    return create_engine(uri, **_pool_kwargs(uri))
 
 
 def get_engine_from_airflow_conn(conn_id: str) -> Engine:
     """Construit un moteur SQLAlchemy depuis une connexion Airflow."""
     conn = BaseHook.get_connection(conn_id)
     uri = build_sqlalchemy_uri_from_airflow_connection(conn)
-    return create_engine(uri)
+    return create_engine(uri, **_pool_kwargs(uri))
 
 
 def build_sqlalchemy_uri_from_airflow_connection(conn: Connection) -> str:

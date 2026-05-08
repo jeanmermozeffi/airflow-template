@@ -1,0 +1,195 @@
+# ═══════════════════════════════════════════════════════════════════════════════
+# Extract Configuration — Template
+# ═══════════════════════════════════════════════════════════════════════════════
+#
+# Fichier unique contenant TOUT pour l'extraction :
+#   - Requêtes SQL (query)
+#   - Colonnes à extraire (columns)
+#   - Tables cibles PostgreSQL (target_table)
+#   - Logique d'upsert (conflict_col, update_cols)
+#   - Paramètres d'extraction (type, cutoff_days)
+#
+# Trois types d'extraction :
+#
+#   incremental  → extraction depuis une date glissante ({cutoff_date} dans query)
+#                  cutoff_days: N  → CURRENT_DATE - N jours
+#
+#   full_load    → rechargement complet, upsert sur conflict_col
+#                  cutoff_days: null
+#
+#   reference    → table de référence, TRUNCATE + INSERT complet à chaque run
+#                  pas de conflict_col ni cutoff_days
+#
+# Chargement via orchestration.sql_loader.load_extractions_config("tables.yaml")
+#
+# Pour ajouter une extraction :
+#   1. Copier le bloc correspondant au type voulu
+#   2. Adapter source_table, target_table, columns, query
+#   3. Redéployer / recharger le DAG d'ingestion
+
+extractions:
+
+    # ── Extraction incrémentale ────────────────────────────────────────────────
+    #
+    # Cas d'usage : table transactionnelle volumineuse (commandes, événements, logs)
+    # Le placeholder {cutoff_date} est remplacé dynamiquement par extract.py
+    # via load_query_template().
+
+    orders:
+        type: incremental
+        cutoff_days: 2                     # extrait J-2 à aujourd'hui
+        target_table: raw.stg_orders
+        conflict_col: id
+        update_cols:
+            - status
+            - updated_at
+            - amount
+        columns:
+            - id
+            - external_id
+            - customer_id
+            - product_id
+            - status
+            - amount
+            - currency
+            - created_at
+            - updated_at
+        query: |
+            SELECT
+                id,
+                external_id,
+                customer_id,
+                product_id,
+                status,
+                amount,
+                currency,
+                created_at,
+                updated_at
+            FROM orders
+            WHERE created_at  >= '{cutoff_date}'
+               OR updated_at  >= '{cutoff_date}'
+
+    # ── Rechargement complet ───────────────────────────────────────────────────
+    #
+    # Cas d'usage : table de taille modérée, historique complet attendu
+    # (projets, utilisateurs, contrats)
+
+    projects:
+        type: full_load
+        cutoff_days: null
+        target_table: raw.stg_projects
+        conflict_col: id
+        update_cols:
+            - name
+            - status
+            - updated_at
+        columns:
+            - id
+            - external_id
+            - name
+            - status
+            - owner_id
+            - start_date
+            - end_date
+            - created_at
+            - updated_at
+        query: |
+            SELECT
+                id,
+                external_id,
+                name,
+                status,
+                owner_id,
+                start_date,
+                end_date,
+                created_at,
+                updated_at
+            FROM projects
+
+    # ── Tables de référence ────────────────────────────────────────────────────
+    #
+    # Cas d'usage : petites tables statiques ou quasi-statiques (statuts, types,
+    # catégories, pays, devises). TRUNCATE + INSERT complet à chaque run.
+    # Pas de conflict_col ni update_cols — le DAG d'ingestion gère le truncate.
+
+    statuses:
+        type: reference
+        target_table: raw.stg_statuses
+        conflict_col: id
+        columns:
+            - id
+            - code
+            - label
+            - is_active
+            - sort_order
+        query: |
+            SELECT
+                id,
+                code,
+                label,
+                is_active,
+                sort_order
+            FROM statuses
+
+    categories:
+        type: reference
+        target_table: raw.stg_categories
+        conflict_col: id
+        columns:
+            - id
+            - code
+            - label
+            - parent_id
+            - is_active
+        query: |
+            SELECT
+                id,
+                code,
+                label,
+                parent_id,
+                is_active
+            FROM categories
+
+    users:
+        type: reference
+        target_table: raw.stg_users
+        conflict_col: id
+        columns:
+            - id
+            - external_id
+            - email
+            - first_name
+            - last_name
+            - role_id
+            - is_active
+            - created_at
+            - last_login_at
+        query: |
+            SELECT
+                id,
+                external_id,
+                email,
+                first_name,
+                last_name,
+                role_id,
+                is_active,
+                created_at,
+                last_login_at
+            FROM users
+
+    # ═══════════════════════════════════════════════════════════════════════════
+    # TEMPLATE : pour ajouter une nouvelle extraction
+    # ═══════════════════════════════════════════════════════════════════════════
+    #
+    # Copier le bloc du type voulu ci-dessus et adapter :
+    #   - La clé (ex: new_table)
+    #   - type: incremental | full_load | reference
+    #   - cutoff_days: N ou null
+    #   - target_table: raw.stg_new_table
+    #   - conflict_col: colonne de clé primaire
+    #   - update_cols: colonnes mises à jour en cas de conflit (upsert)
+    #   - columns: liste des colonnes extraites
+    #   - query: requête SQL source
+    #
+    # Pas besoin de redéployer le DAG — il recharge tables.yaml à chaque run.
+    # ═══════════════════════════════════════════════════════════════════════════

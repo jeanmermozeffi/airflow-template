@@ -242,3 +242,4 @@ deployment/airflow-logs-dev
 .en.prod
 .DS_Store
 .idea/
+/.prompt.md
