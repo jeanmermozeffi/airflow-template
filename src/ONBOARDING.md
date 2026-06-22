@@ -198,7 +198,7 @@ airflow-template/
 
 ```bash
 git clone <url-du-repo>
-cd airflow-template
+cd airflow-plateforme-template
 ```
 
 ### Étape 2 — Configurer les variables d'environnement

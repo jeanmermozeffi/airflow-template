@@ -4,7 +4,7 @@ import os
 import time
 from typing import Sequence
 
-from airflow.sensors.base import BaseSensorOperator
+from airflow.sdk.bases.sensor import BaseSensorOperator
 
 
 class FileFreshnessSensor(BaseSensorOperator):

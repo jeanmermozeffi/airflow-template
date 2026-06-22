@@ -153,10 +153,10 @@ AIRFLOW__DATABASE__SQL_ALCHEMY_CONN     → Connexion metadata DB
 
 ```bash
 # Image de base
-docker build -t synelia/airflow-template:1.0.0 .
+docker build -t synelia/airflow-plateforme-template:1.0.0 .
 
 # Vérifier l'image
-docker run --rm synelia/airflow-template:1.0.0 python -c "import airflow; print(airflow.__version__)"
+docker run --rm synelia/airflow-plateforme-template:1.0.0 python -c "import airflow; print(airflow.__version__)"
 ```
 
 ### Opérations de base
@@ -295,7 +295,7 @@ docker compose exec airflow-scheduler python scripts/bootstrap_airflow.py
 ```bash
 # 1. Cloner et configurer
 git clone <url-repo>
-cd airflow-template
+cd airflow-plateforme-template
 cp .env.example .env
 # Éditer .env avec les valeurs locales
 
@@ -350,7 +350,7 @@ docker compose -f deployment/docker-compose.dev.yml up -d
 ssh deploy@airflow-staging.synelia.com
 
 # 2. Mettre à jour le code
-cd /opt/airflow-template
+cd /opt/airflow-plateforme-template
 git pull origin main
 
 # 3. Construire les nouvelles images (si Dockerfile modifié)

@@ -2,19 +2,25 @@
 # Copiez ce fichier vers .devops.yml et configurez-le
 
 project_name: airflow-project
-stack_type: fastapi-redis
+stack_type: orchestrator
 compose_project_name: airflow-project
 label_namespace: cic
 
-# Orchestrator / Airflow (optionnel)
-airflow_version: 3.0.4
-airflow_base_image: apache/airflow:3.0.4-python3.11
-airflow_dags_folder_default: /opt/airflow/src/airflow_src/dags
-airflow_plugins_folder_default: /opt/airflow/src/airflow_src/plugins
+# Orchestrator / Airflow
+airflow_version: 3.1.5
+airflow_base_image: apache/airflow:3.1.5-python3.11
+release_multiarch: false
+release_platforms: linux/amd64
 
 registry_username: your-dockerhub-username
 registry_url: docker.io
 image_name: airflow-project
+
+# Structure du projet (tout le code métier est dans src/)
+app_source_dir: src
+app_dest_dir: src
+requirements_path: requirements.txt
+workdir: /app
 
 git_repo: https://github.com/votre-org/airflow-project.git
 github_token: # Optionnel

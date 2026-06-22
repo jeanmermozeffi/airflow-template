@@ -1,0 +1,2 @@
+# Placeholder pour conserver le dossier src/src/ dans Git.
+# Utilisé comme chemin sys.path par dags/_bootstrap.py (structure Admin Sys).

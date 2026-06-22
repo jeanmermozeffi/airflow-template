@@ -38,7 +38,7 @@ from __future__ import annotations
 from typing import Optional, Sequence
 
 from airflow.exceptions import AirflowException
-from airflow.sensors.base import BaseSensorOperator
+from airflow.sdk.bases.sensor import BaseSensorOperator
 
 
 class TableDataSensor(BaseSensorOperator):

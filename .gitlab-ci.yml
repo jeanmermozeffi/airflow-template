@@ -1,0 +1,28 @@
+# ──────────────────────────────────────────────────────────────────────────────
+# CI/CD GitLab — Template Airflow (structure Admin Sys)
+#
+# Ce fichier délègue le déploiement aux charts/operators centralisés de la plate-
+# forme. Adaptez uniquement les variables ci-dessous à votre projet.
+#   - charts/airflow            : build de l'image custom + déploiement Airflow
+#   - operators/postgresql-provider : crée le user, le mot de passe et la base
+#                                     de données dédiés au projet
+# ──────────────────────────────────────────────────────────────────────────────
+variables:
+
+    # ── Airflow ───────────────────────────────────────────────────────────────
+    # "true" => l'image est construite depuis src/Dockerfile (image custom projet)
+    AIRFLOW_CUSTOM_IMAGE: "true"
+
+    # ── Base de données projet (postgresql-provider) ──────────────────────────
+    # Remplacez par le nom de votre projet (souvent <projet>_dwh)
+    DATABASE_NAME: airflow_project_dwh
+    DATABASE_USERNAME: airflow_project_dwh
+    DATABASE_PASSWORD: airflow_project_dwh
+
+
+include:
+    - project: 'template/charts/airflow'
+      file: '/.gitlab-ci.yml'
+
+    - project: 'template/operators/postgresql-provider' # crée le user, son mot de passe et la base du projet
+      file: '/.gitlab-ci.yml'

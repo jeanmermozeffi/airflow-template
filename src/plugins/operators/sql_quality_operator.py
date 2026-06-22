@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Sequence
 
 from airflow.exceptions import AirflowException
-from airflow.models.baseoperator import BaseOperator
+from airflow.sdk.bases.operator import BaseOperator
 from airflow.providers.postgres.hooks.postgres import PostgresHook
 
 

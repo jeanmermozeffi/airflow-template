@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from typing import Any, Optional
 
+from airflow.exceptions import AirflowNotFoundException
 from airflow.models.connection import Connection
 from airflow.sdk.bases.hook import BaseHook
 from sqlalchemy import create_engine
@@ -44,9 +45,19 @@ def get_engine_from_source_name(
     source_name: str,
     integration_config: Optional[IntegrationConfig] = None,
 ) -> Engine:
-    """Construit un moteur depuis une source déclarée en variables d'environnement."""
+    """Construit un moteur depuis une source d'environnement, avec fallback Airflow."""
     config = integration_config or IntegrationConfig.from_environment()
-    source = config.require_database(source_name=source_name)
+    try:
+        source = config.require_database(source_name=source_name)
+    except KeyError:
+        try:
+            return get_engine_from_airflow_conn(conn_id=source_name)
+        except AirflowNotFoundException as airflow_exc:
+            raise KeyError(
+                f"Source DB introuvable: {source_name}. "
+                f"Définir ORCH_DB__{source_name.upper()}__* ou créer la connexion Airflow "
+                f"conn_id={source_name}."
+            ) from airflow_exc
     uri = source.sqlalchemy_uri()
     return create_engine(uri, **_pool_kwargs(uri))
 

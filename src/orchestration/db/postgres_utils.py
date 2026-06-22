@@ -27,12 +27,37 @@ def check_postgres_connection(conn_id: str, test_query: str = "SELECT 1") -> boo
 
 
 def validate_required_connections(conn_ids: Iterable[str]) -> None:
-    """Vérifie toutes les connexions SQL requises avant exécution du pipeline."""
+    """Vérifie toutes les connexions SQL requises avant exécution du pipeline.
+
+    Note: Les connexions non-SQL (SMTP, HTTP, etc.) sont ignorées car elles
+    ne supportent pas les requêtes SELECT pour la validation.
+    """
+    from airflow.models import Connection
+
     missing_or_invalid: list[str] = []
+    non_sql_types = {'smtp', 'http', 'https', 'slack', 'webhook', 'generic'}
+
     for conn_id in conn_ids:
         try:
+            # Récupérer le type de la connexion
+            conn = Connection.get_connection_from_secrets(conn_id)
+
+            # Ignorer les connexions non-SQL
+            if conn and conn.conn_type in non_sql_types:
+                logger.info(f"⏭️  Connexion '{conn_id}' ({conn.conn_type}) ignorée (non-SQL)")
+                continue
+
+            # Valider les connexions SQL
             check_connection(conn_id=conn_id)
         except Exception as error:  # pragma: no cover
+            # Essayer de récupérer la connexion pour voir si c'est non-SQL
+            try:
+                conn = Connection.get_connection_from_secrets(conn_id)
+                if conn and conn.conn_type in non_sql_types:
+                    logger.info(f"⏭️  Connexion '{conn_id}' ({conn.conn_type}) ignorée (non-SQL)")
+                    continue
+            except Exception:
+                pass
             logger.error("Connexion invalide: %s (%s)", conn_id, error)
             missing_or_invalid.append(conn_id)
 

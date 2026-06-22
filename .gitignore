@@ -233,13 +233,16 @@ infra/.env.prod
 
 # Runtime local Docker wrapper dir
 /.docker/
-deployment/postgres-data-dev/
-deployment/airflow-logs-dev
+src/deployment/postgres-data-*/
+**/airflow-logs-*/
 /.devops.monitoring-servers.yml
 
 # Ignorer tous les fichiers d’environnement
 .env.*
+!src/.env.*.example
 .en.prod
 .DS_Store
 .idea/
+/.claude/
 /.prompt.md
+src/.prompt.md

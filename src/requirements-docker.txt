@@ -1,0 +1,18 @@
+# =============================================================================
+# requirements-docker.txt — Dépendances additionnelles pour l'image Docker
+#
+# NE PAS inclure apache-airflow ni ses providers ici :
+# ils sont déjà présents dans l'image de base apache/airflow:<version>.
+# Les ajouter provoquerait des conflits de dépendances (ex: Jinja2, cryptography…)
+#
+# Ce fichier est utilisé par src/Dockerfile (image custom du projet).
+# Pour le développement local (IDE, tests), utiliser requirements.txt.
+# =============================================================================
+
+# ── Accès bases de données ───────────────────────────────────────────────────
+psycopg2-binary>=2.9.10
+PyMySQL>=1.1.1
+
+# ── Utilitaires projet ────────────────────────────────────────────────────────
+PyYAML>=6.0.2
+python-dotenv>=1.1.1

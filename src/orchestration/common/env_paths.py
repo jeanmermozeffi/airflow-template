@@ -12,13 +12,17 @@ logger = logging.getLogger(__name__)
 
 
 def resolve_project_root() -> Path:
-    """Résout la racine projet depuis l'environnement puis depuis la structure locale."""
+    """Résout la racine applicative (src/) depuis l'environnement ou la structure locale.
+
+    En Docker : AIRFLOW_HOME=/opt/airflow → retourne /opt/airflow
+    En local  : remonte de src/orchestration/common/ vers src/ (parents[2])
+    """
     env_root = os.getenv("ORCHESTRATION_PROJECT_ROOT") or os.getenv("AIRFLOW_HOME")
     if env_root:
         return Path(env_root)
 
-    # .../src/orchestration/common/env_paths.py -> repo root
-    return Path(__file__).resolve().parents[3]
+    # src/orchestration/common/env_paths.py → parents[2] = src/
+    return Path(__file__).resolve().parents[2]
 
 
 def resolve_active_env(default_env: str = "dev") -> str:

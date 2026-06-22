@@ -31,7 +31,7 @@ import logging
 from typing import Optional, Sequence
 
 from airflow.exceptions import AirflowException
-from airflow.models.baseoperator import BaseOperator
+from airflow.sdk.bases.operator import BaseOperator
 
 log = logging.getLogger(__name__)
 
